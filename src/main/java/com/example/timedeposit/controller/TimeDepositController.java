@@ -27,11 +27,9 @@ public class TimeDepositController {
      */
     @PostMapping // Register a new time deposit
     public ResponseEntity<TimeDepositResponse> registerTimeDeposit(@Valid @RequestBody TimeDepositRequest request) {
-        System.out.println("Received request: " + request); // ← Agrega esta línea
         TimeDepositResponse response = timeDepositService.registerDeposit(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
-
     /**
      * Endpoint to list all time deposits
      * @return List of time deposits
