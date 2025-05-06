@@ -2,10 +2,7 @@ package com.example.timedeposit.service;
 
 import com.example.timedeposit.exception.AccountAlreadyExistsException;
 import com.example.timedeposit.exception.DuplicateDepositException;
-import com.example.timedeposit.model.Customer;
-import com.example.timedeposit.model.TimeDeposit;
-import com.example.timedeposit.model.TimeDepositRequest;
-import com.example.timedeposit.model.TimeDepositResponse;
+import com.example.timedeposit.model.*;
 import com.example.timedeposit.repository.CustomerRepository;
 import com.example.timedeposit.repository.TimeDepositRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +31,7 @@ public class TimeDepositServiceImpl implements TimeDepositService {
 
     @Override
     @Transactional
-    public TimeDepositResponse registerDeposit(TimeDepositRequest request) {
+    public CustomerResponse registerDeposit(TimeDepositRequest request){
 
         final Logger log = LoggerFactory.getLogger(TimeDepositServiceImpl.class);
         // Check if customer exists or create a new one
@@ -81,8 +78,15 @@ public class TimeDepositServiceImpl implements TimeDepositService {
         // Save to database
         TimeDeposit savedDeposit = timeDepositRepository.save(timeDeposit);
 
-        // Convert entity to response
-        return convertToResponse(savedDeposit);
+        // Convertimos el cliente y sus depósitos a DTO
+        List<TimeDeposit> deposits = timeDepositRepository.findByCustomer_AccountNumber(customer.getAccountNumber());
+
+        return CustomerResponse.builder()
+                .id(customer.getId())
+                .accountNumber(customer.getAccountNumber())
+                .customerName(customer.getCustomerName())
+                .timeDeposits(deposits.stream().map(this::convertToResponse).collect(Collectors.toList()))
+                .build();
     }
 
     @Override

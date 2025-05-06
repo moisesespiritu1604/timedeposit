@@ -1,4 +1,5 @@
 package com.example.timedeposit.controller;
+import com.example.timedeposit.model.CustomerResponse;
 import com.example.timedeposit.model.TimeDepositRequest;
 import com.example.timedeposit.model.TimeDepositResponse;
 import com.example.timedeposit.service.TimeDepositService;
@@ -25,11 +26,12 @@ public class TimeDepositController {
      * @param request Time deposit data
      * @return Registered time deposit
      */
-    @PostMapping // Register a new time deposit
-    public ResponseEntity<TimeDepositResponse> registerTimeDeposit(@Valid @RequestBody TimeDepositRequest request) {
-        TimeDepositResponse response = timeDepositService.registerDeposit(request);
+    @PostMapping
+    public ResponseEntity<CustomerResponse> registerTimeDeposit(@Valid @RequestBody TimeDepositRequest request) {
+        CustomerResponse response = timeDepositService.registerDeposit(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
+
     /**
      * Endpoint to list all time deposits
      * @return List of time deposits

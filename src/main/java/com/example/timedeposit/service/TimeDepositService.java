@@ -1,5 +1,6 @@
 package com.example.timedeposit.service;
 
+import com.example.timedeposit.model.CustomerResponse;
 import com.example.timedeposit.model.TimeDepositRequest;
 import com.example.timedeposit.model.TimeDepositResponse;
 
@@ -11,7 +12,7 @@ public interface TimeDepositService {
      * @param request Request data
      * @return Response with the registered deposit data
      */
-    TimeDepositResponse registerDeposit(TimeDepositRequest request);
+    CustomerResponse registerDeposit(TimeDepositRequest request);
 
     /**
      * Gets all time deposit requests

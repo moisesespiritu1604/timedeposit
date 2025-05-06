@@ -1,5 +1,6 @@
 package com.example.timedeposit.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -23,6 +24,7 @@ public class TimeDeposit {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
+    @JsonBackReference
     private Customer customer;
 
     @NotNull(message = "Amount is required")
@@ -74,4 +76,5 @@ public class TimeDeposit {
     public String getFormattedMaturityDate() {
         return maturityDate != null ? maturityDate.format(DateTimeFormatter.ISO_DATE) : null;
     }
+
 }
