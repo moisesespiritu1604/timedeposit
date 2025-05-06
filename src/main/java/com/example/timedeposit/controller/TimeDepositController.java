@@ -1,7 +1,9 @@
 package com.example.timedeposit.controller;
-import com.example.timedeposit.model.CustomerResponse;
-import com.example.timedeposit.model.TimeDepositRequest;
-import com.example.timedeposit.model.TimeDepositResponse;
+import com.example.timedeposit.dto.CustomerDepositResponse;
+import com.example.timedeposit.dto.CustomerResponse;
+import com.example.timedeposit.dto.TimeDepositDetailResponse;
+import com.example.timedeposit.dto.TimeDepositRequest;
+import com.example.timedeposit.dto.TimeDepositResponse;
 import com.example.timedeposit.service.TimeDepositService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,21 +26,21 @@ public class TimeDepositController {
     /**
      * Endpoint to register a new time deposit
      * @param request Time deposit data
-     * @return Registered time deposit
+     * @return Customer with the newly registered deposit
      */
     @PostMapping
-    public ResponseEntity<CustomerResponse> registerTimeDeposit(@Valid @RequestBody TimeDepositRequest request) {
-        CustomerResponse response = timeDepositService.registerDeposit(request);
+    public ResponseEntity<CustomerDepositResponse> registerTimeDeposit(@Valid @RequestBody TimeDepositRequest request) {
+        CustomerDepositResponse response = timeDepositService.registerDeposit(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     /**
-     * Endpoint to list all time deposits
-     * @return List of time deposits
+     * Endpoint to list all time deposits with detailed information
+     * @return List of time deposits with detailed information
      */
     @GetMapping
-    public ResponseEntity<List<TimeDepositResponse>> listTimeDeposits() {
-        List<TimeDepositResponse> deposits = timeDepositService.listTimeDeposits();
+    public ResponseEntity<List<TimeDepositDetailResponse>> listTimeDeposits() {
+        List<TimeDepositDetailResponse> deposits = timeDepositService.listDetailedTimeDeposits();
         return ResponseEntity.ok(deposits);
     }
 }

@@ -1,4 +1,4 @@
-package com.example.timedeposit.model;
+package com.example.timedeposit.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,8 +14,6 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class TimeDepositResponse {
     private Long id;
-    private String accountNumber;
-    private String customerName;
     private BigDecimal amount;
     private BigDecimal interestRate;
     private Integer termDays;
@@ -23,8 +21,6 @@ public class TimeDepositResponse {
     private LocalDate maturityDate;
     private BigDecimal interestEarned;
     private String status;
-
-    // Formatted dates in ISO format (YYYY-MM-DD)
     private String formattedApplicationDate;
     private String formattedMaturityDate;
 }

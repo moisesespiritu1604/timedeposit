@@ -1,4 +1,4 @@
-package com.example.timedeposit.model;
+package com.example.timedeposit.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

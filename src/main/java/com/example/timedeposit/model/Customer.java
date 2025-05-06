@@ -8,7 +8,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(name = "customers")
@@ -32,5 +35,6 @@ public class Customer {
     private String customerName;
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<TimeDeposit> timeDeposits;
+    @JsonManagedReference
+    private List<TimeDeposit> timeDeposits = new ArrayList<>();
 }

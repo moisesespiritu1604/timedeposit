@@ -29,12 +29,14 @@ public class TimeDeposit {
 
     @NotNull(message = "Amount is required")
     @DecimalMin(value = "100.00", message = "Amount must be at least 100.00")
+    @Digits(integer = 10, fraction = 2, message = "Amount must be a numeric value with up to 10 digits and 2 decimal places")
     @Column(nullable = false)
     private BigDecimal amount;
 
     @NotNull(message = "Interest rate is required")
     @DecimalMin(value = "0.01", message = "Interest rate must be at least 0.01")
     @DecimalMax(value = "20.00", message = "Interest rate cannot exceed 20.00")
+    @Digits(integer = 2, fraction = 2, message = "Interest rate must be a numeric value with up to 2 digits and 2 decimal places")
     @Column(name = "interest_rate", nullable = false)
     private BigDecimal interestRate;
 

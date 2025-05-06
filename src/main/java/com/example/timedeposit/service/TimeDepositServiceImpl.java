@@ -1,7 +1,13 @@
 package com.example.timedeposit.service;
 
+import com.example.timedeposit.dto.CustomerDepositResponse;
+import com.example.timedeposit.dto.CustomerResponse;
+import com.example.timedeposit.dto.TimeDepositDetailResponse;
+import com.example.timedeposit.dto.TimeDepositRequest;
+import com.example.timedeposit.dto.TimeDepositResponse;
 import com.example.timedeposit.exception.AccountAlreadyExistsException;
 import com.example.timedeposit.exception.DuplicateDepositException;
+import com.example.timedeposit.exception.InvalidNumericValueException;
 import com.example.timedeposit.model.*;
 import com.example.timedeposit.repository.CustomerRepository;
 import com.example.timedeposit.repository.TimeDepositRepository;
@@ -20,6 +26,8 @@ import org.slf4j.LoggerFactory;
 @Service
 public class TimeDepositServiceImpl implements TimeDepositService {
 
+    private static final Logger log = LoggerFactory.getLogger(TimeDepositServiceImpl.class);
+    
     private final TimeDepositRepository timeDepositRepository;
     private final CustomerRepository customerRepository;
 
@@ -31,21 +39,21 @@ public class TimeDepositServiceImpl implements TimeDepositService {
 
     @Override
     @Transactional
-    public CustomerResponse registerDeposit(TimeDepositRequest request){
-
-        final Logger log = LoggerFactory.getLogger(TimeDepositServiceImpl.class);
+    public CustomerDepositResponse registerDeposit(TimeDepositRequest request) {
+        validateNumericFields(request);
+        
         // Check if customer exists or create a new one
         Customer customer;
         Optional<Customer> existingCustomer = customerRepository.findByAccountNumber(request.getAccountNumber());
-
+        
         if (existingCustomer.isPresent()) {
             customer = existingCustomer.get();
             // If customer exists but with different name, throw exception
             if (!customer.getCustomerName().equals(request.getCustomerName())) {
                 throw new AccountAlreadyExistsException("Account number already exists with a different customer name");
             }
-            // AQUÍ ES DONDE SE AGREGA LA VALIDACIÓN DE DEPÓSITOS DUPLICADOS
-            // Verificar si ya existe un depósito con los mismos parámetros creado recientemente
+            
+            // Check for duplicate deposits
             LocalDate today = LocalDate.now();
             List<TimeDeposit> existingDeposits = timeDepositRepository.findByCustomer_AccountNumber(request.getAccountNumber());
             
@@ -67,56 +75,109 @@ public class TimeDepositServiceImpl implements TimeDepositService {
             customer.setCustomerName(request.getCustomerName());
             customer = customerRepository.save(customer);
         }
-
+        
         // Create time deposit
         TimeDeposit timeDeposit = new TimeDeposit();
         timeDeposit.setCustomer(customer);
         timeDeposit.setAmount(request.getAmount());
         timeDeposit.setInterestRate(request.getInterestRate());
         timeDeposit.setTermDays(request.getTermDays());
-
+        
         // Save to database
         TimeDeposit savedDeposit = timeDepositRepository.save(timeDeposit);
-
-        // Convertimos el cliente y sus depósitos a DTO
-        List<TimeDeposit> deposits = timeDepositRepository.findByCustomer_AccountNumber(customer.getAccountNumber());
-
-        return CustomerResponse.builder()
+        
+        // Get all deposits for this customer
+        List<TimeDeposit> customerDeposits = timeDepositRepository.findByCustomer_AccountNumber(customer.getAccountNumber());
+        
+        // Build response with separate customer and deposits objects
+        CustomerDepositResponse.CustomerInfo customerInfo = CustomerDepositResponse.CustomerInfo.builder()
                 .id(customer.getId())
                 .accountNumber(customer.getAccountNumber())
                 .customerName(customer.getCustomerName())
-                .timeDeposits(deposits.stream().map(this::convertToResponse).collect(Collectors.toList()))
+                .build();
+        
+        List<TimeDepositResponse> depositResponses = customerDeposits.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+        
+        return CustomerDepositResponse.builder()
+                .customer(customerInfo)
+                .deposits(depositResponses)
                 .build();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<TimeDepositResponse> listTimeDeposits() {
-        return timeDepositRepository.findAll().stream()
-                .map(this::convertToResponse)
+    public List<TimeDepositDetailResponse> listDetailedTimeDeposits() {
+        List<TimeDeposit> allDeposits = timeDepositRepository.findAll();
+        
+        return allDeposits.stream()
+                .map(this::convertToDetailedResponse)
                 .collect(Collectors.toList());
     }
-
+    
+    /**
+     * Validates that numeric fields contain only numeric values
+     */
+    private void validateNumericFields(TimeDepositRequest request) {
+        try {
+            // These will throw exceptions if the values are not valid numbers
+            if (request.getAccountNumber() != null && !request.getAccountNumber().matches("^[0-9]+$")) {
+                throw new InvalidNumericValueException("Account number must contain only digits");
+            }
+            
+            if (request.getAmount() != null) {
+                request.getAmount().doubleValue();
+            }
+            
+            if (request.getInterestRate() != null) {
+                request.getInterestRate().doubleValue();
+            }
+            
+            if (request.getTermDays() != null) {
+                Integer.valueOf(request.getTermDays());
+            }
+        } catch (NumberFormatException e) {
+            throw new InvalidNumericValueException("One or more numeric fields contain invalid values: " + e.getMessage());
+        }
+    }
 
     /**
      * Converts a TimeDeposit entity to a TimeDepositResponse DTO
      */
-    private TimeDepositResponse convertToResponse(TimeDeposit timeDeposit) {
+    private TimeDepositResponse convertToResponse(TimeDeposit deposit) {
         return TimeDepositResponse.builder()
-                .id(timeDeposit.getId())
-                .accountNumber(timeDeposit.getCustomer().getAccountNumber())
-                .customerName(timeDeposit.getCustomer().getCustomerName())
-                .amount(timeDeposit.getAmount())
-                .interestRate(timeDeposit.getInterestRate())
-                .termDays(timeDeposit.getTermDays())
-                .applicationDate(timeDeposit.getApplicationDate())
-                .maturityDate(timeDeposit.getMaturityDate())
-                .interestEarned(timeDeposit.getInterestEarned())
-                .status(timeDeposit.getStatus())
-                .formattedApplicationDate(timeDeposit.getApplicationDate() != null ? 
-                    timeDeposit.getApplicationDate().format(DateTimeFormatter.ISO_DATE) : null)
-                .formattedMaturityDate(timeDeposit.getMaturityDate() != null ? 
-                    timeDeposit.getMaturityDate().format(DateTimeFormatter.ISO_DATE) : null)
+                .id(deposit.getId())
+                .amount(deposit.getAmount())
+                .interestRate(deposit.getInterestRate())
+                .termDays(deposit.getTermDays())
+                .applicationDate(deposit.getApplicationDate())
+                .maturityDate(deposit.getMaturityDate())
+                .interestEarned(deposit.getInterestEarned())
+                .status(deposit.getStatus())
+                .formattedApplicationDate(deposit.getFormattedApplicationDate())
+                .formattedMaturityDate(deposit.getFormattedMaturityDate())
                 .build();
     }
+    
+    /**
+     * Converts a TimeDeposit entity to a TimeDepositDetailResponse DTO with customer information
+     */
+    private TimeDepositDetailResponse convertToDetailedResponse(TimeDeposit deposit) {
+        return TimeDepositDetailResponse.builder()
+                .id(deposit.getId())
+                .accountNumber(deposit.getCustomer().getAccountNumber())
+                .customerName(deposit.getCustomer().getCustomerName())
+                .amount(deposit.getAmount())
+                .interestRate(deposit.getInterestRate())
+                .termDays(deposit.getTermDays())
+                .applicationDate(deposit.getApplicationDate())
+                .maturityDate(deposit.getMaturityDate())
+                .interestEarned(deposit.getInterestEarned())
+                .status(deposit.getStatus())
+                .formattedApplicationDate(deposit.getFormattedApplicationDate())
+                .formattedMaturityDate(deposit.getFormattedMaturityDate())
+                .build();
+    }
+    
 }

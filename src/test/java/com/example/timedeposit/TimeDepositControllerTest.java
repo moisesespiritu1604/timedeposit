@@ -1,9 +1,12 @@
-package com.example.timedeposit.controller;
-
-import com.example.timedeposit.model.TimeDepositRequest;
-import com.example.timedeposit.model.TimeDepositResponse;
+import com.example.timedeposit.controller.TimeDepositController;
+import com.example.timedeposit.dto.CustomerDepositResponse;
+import com.example.timedeposit.dto.TimeDepositDetailResponse;
+import com.example.timedeposit.dto.TimeDepositRequest;
+import com.example.timedeposit.dto.TimeDepositResponse;
 import com.example.timedeposit.service.TimeDepositService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,41 +18,40 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ExtendWith(MockitoExtension.class) // Extiende el test con Mockito para habilitar anotaciones de mocks
+@ExtendWith(MockitoExtension.class)
 class TimeDepositControllerTest {
 
-    // MockMvc simula llamadas HTTP a nuestro controlador sin levantar un servidor real
     private MockMvc mockMvc;
 
-    // Se crea un objeto simulado (mock) del servicio que utiliza el controlador.
     @Mock
     private TimeDepositService timeDepositService;
 
-    // Se inyectan los mocks en la instancia real del controlador
     @InjectMocks
     private TimeDepositController timeDepositController;
 
-    // ObjectMapper se utiliza para convertir objetos Java a JSON y viceversa.
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Este método se ejecuta antes de cada test para configurar MockMvc con el controlador inyectado
     @BeforeEach
     void setup() {
+        // Configurar ObjectMapper para manejar tipos de fecha de Java 8
+        objectMapper.registerModule(new JavaTimeModule());
+        
         mockMvc = MockMvcBuilders.standaloneSetup(timeDepositController).build();
     }
 
-    // Prueba que valida el registro de un depósito exitoso
     @Test
     void registerDeposit_ShouldReturnCreated() throws Exception {
         // ARRANGE:
-        // Se crea un objeto de solicitud (request) con los datos necesarios
         TimeDepositRequest request = new TimeDepositRequest();
         request.setAccountNumber("12345678");
         request.setCustomerName("John Doe");
@@ -57,40 +59,92 @@ class TimeDepositControllerTest {
         request.setInterestRate(new BigDecimal("5.0"));
         request.setTermDays(90);
 
-        // Se crea un objeto de respuesta (response) simulado con el resultado esperado
-        TimeDepositResponse response = new TimeDepositResponse();
-        response.setCustomerName("John Doe");
+        // Crear respuesta con la nueva estructura CustomerDepositResponse
+        CustomerDepositResponse.CustomerInfo customerInfo = CustomerDepositResponse.CustomerInfo.builder()
+                .id(1L)
+                .accountNumber("12345678")
+                .customerName("John Doe")
+                .build();
+        
+        TimeDepositResponse depositResponse = TimeDepositResponse.builder()
+                .id(1L)
+                .amount(new BigDecimal("1000"))
+                .interestRate(new BigDecimal("5.0"))
+                .termDays(90)
+                .applicationDate(LocalDate.now())
+                .maturityDate(LocalDate.now().plusDays(90))
+                .interestEarned(new BigDecimal("12.33"))
+                .status("active")
+                .formattedApplicationDate(LocalDate.now().toString())
+                .formattedMaturityDate(LocalDate.now().plusDays(90).toString())
+                .build();
+        
+        List<TimeDepositResponse> deposits = new ArrayList<>();
+        deposits.add(depositResponse);
+        
+        CustomerDepositResponse response = CustomerDepositResponse.builder()
+                .customer(customerInfo)
+                .deposits(deposits)
+                .build();
 
-        // Se configura el comportamiento del mock: cuando se invoque registerDeposit con cualquier TimeDepositRequest,
-        // se retornará el objeto response simulado.
         when(timeDepositService.registerDeposit(any(TimeDepositRequest.class)))
                 .thenReturn(response);
 
         // ACT & ASSERT:
-        // Se realiza una llamada HTTP POST al endpoint "/api/time-deposits" con el contenido JSON del request
-        // y se verifican los resultados:
-        // - status().isCreated(): se espera un código HTTP 201 (CREATED)
-        // - jsonPath("$.customerName") valida que en la respuesta, el campo "customerName" tenga el valor "John Doe"
         mockMvc.perform(post("/api/time-deposits")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.customerName").value("John Doe"));
+                .andExpect(jsonPath("$.customer").exists())
+                .andExpect(jsonPath("$.customer.accountNumber").value("12345678"))
+                .andExpect(jsonPath("$.customer.customerName").value("John Doe"))
+                .andExpect(jsonPath("$.deposits").isArray())
+                .andExpect(jsonPath("$.deposits[0].amount").value(1000));
     }
 
-    // Prueba que valida que al solicitar la lista de depósitos se retorna un array (en este caso, vacío)
     @Test
-    void listDeposits_ShouldReturnEmptyList() throws Exception {
-        // ARRANGE: se configura el servicio simulado para que retorne una lista vacía al invocar listTimeDeposits()
-        when(timeDepositService.listTimeDeposits()).thenReturn(Collections.emptyList());
+    void listDeposits_ShouldReturnDetailedList() throws Exception {
+        // ARRANGE: 
+        // Crear una lista de TimeDepositDetailResponse en lugar de TimeDepositResponse
+        TimeDepositDetailResponse detailResponse = TimeDepositDetailResponse.builder()
+                .id(1L)
+                .accountNumber("12345678")
+                .customerName("John Doe")
+                .amount(new BigDecimal("1000"))
+                .interestRate(new BigDecimal("5.0"))
+                .termDays(90)
+                .applicationDate(LocalDate.now())
+                .maturityDate(LocalDate.now().plusDays(90))
+                .interestEarned(new BigDecimal("12.33"))
+                .status("active")
+                .formattedApplicationDate(LocalDate.now().toString())
+                .formattedMaturityDate(LocalDate.now().plusDays(90).toString())
+                .build();
+        
+        List<TimeDepositDetailResponse> detailedList = Collections.singletonList(detailResponse);
+        
+        when(timeDepositService.listDetailedTimeDeposits()).thenReturn(detailedList);
 
-        // ACT & ASSERT: Se realiza una llamada HTTP GET al endpoint "/api/time-deposits" y se valida:
-        // - El código HTTP 200 (OK)
-        // - Que el contenido sea de tipo JSON
-        // - Que la respuesta sea un arreglo JSON
+        // ACT & ASSERT:
         mockMvc.perform(get("/api/time-deposits"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].accountNumber").value("12345678"))
+                .andExpect(jsonPath("$[0].customerName").value("John Doe"))
+                .andExpect(jsonPath("$[0].amount").value(1000));
+    }
+    
+    @Test
+    void listDeposits_ShouldReturnEmptyList() throws Exception {
+        // ARRANGE: 
+        when(timeDepositService.listDetailedTimeDeposits()).thenReturn(Collections.emptyList());
+
+        // ACT & ASSERT:
+        mockMvc.perform(get("/api/time-deposits"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 }
