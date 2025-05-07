@@ -21,6 +21,4 @@ public class TimeDepositResponse {
     private LocalDate maturityDate;
     private BigDecimal interestEarned;
     private String status;
-    private String formattedApplicationDate;
-    private String formattedMaturityDate;
 }

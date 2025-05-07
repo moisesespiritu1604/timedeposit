@@ -114,7 +114,6 @@
 				<configuration>
 					<includes>
 						<include>**/controller/*</include>
-						<include>**/exception/GlobalExceptionHandler*</include>
 						<include>**/service/TimeDepositServiceImpl*</include>
 					</includes>
 				</configuration>

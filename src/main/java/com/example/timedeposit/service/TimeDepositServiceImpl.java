@@ -46,22 +46,7 @@ public class TimeDepositServiceImpl implements TimeDepositService {
             if (!customer.getCustomerName().equals(request.getCustomerName())) {
                 throw new AccountAlreadyExistsException("Account number already exists with a different customer name");
             }
-
-            LocalDate today = LocalDate.now();
-            List<TimeDeposit> existingDeposits = timeDepositRepository.findByCustomer_AccountNumber(request.getAccountNumber());
-
-            boolean duplicateExists = existingDeposits.stream()
-                    .anyMatch(deposit ->
-                            deposit.getAmount().compareTo(request.getAmount()) == 0 &&
-                                    deposit.getInterestRate().compareTo(request.getInterestRate()) == 0 &&
-                                    deposit.getTermDays().equals(request.getTermDays()) &&
-                                    deposit.getApplicationDate().equals(today)
-                    );
-
-            if (duplicateExists) {
-                log.warn("Duplicate deposit detected for account {}", request.getAccountNumber());
-                throw new DuplicateDepositException("A deposit with identical parameters has already been registered today for this account");
-            }
+            // **Se eliminó el bloque de verificación de depósitos duplicados**
         } else {
             customer = new Customer();
             customer.setAccountNumber(request.getAccountNumber());
@@ -119,8 +104,6 @@ public class TimeDepositServiceImpl implements TimeDepositService {
                 .maturityDate(deposit.getMaturityDate())
                 .interestEarned(deposit.getInterestEarned())
                 .status(deposit.getStatus())
-                .formattedApplicationDate(deposit.getFormattedApplicationDate())
-                .formattedMaturityDate(deposit.getFormattedMaturityDate())
                 .build();
     }
     
@@ -139,8 +122,6 @@ public class TimeDepositServiceImpl implements TimeDepositService {
                 .maturityDate(deposit.getMaturityDate())
                 .interestEarned(deposit.getInterestEarned())
                 .status(deposit.getStatus())
-                .formattedApplicationDate(deposit.getFormattedApplicationDate())
-                .formattedMaturityDate(deposit.getFormattedMaturityDate())
                 .build();
     }
     
